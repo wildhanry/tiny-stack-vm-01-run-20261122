@@ -1,19 +1,16 @@
-// Tiny stack VM for the make.fun bounty tiny-stack-vm-01-run-20261122.
-// An interpreter of the tiny stack ISA (kit: generator/subject/ISA.md),
-// written from the reference VM's semantics: 32-bit wrapping integers,
-// a 256-value data stack, 64 return addresses, 256 words of memory, and
-// ten traps, each with its own exit code. No dependencies, Node 22 only.
+// Tiny stack VM for make.fun tiny-stack-vm-01-run-20261122: an interpreter
+// of the tiny stack ISA (kit generator/subject/ISA.md), faithful to the
+// reference VM: 32-bit wrapping ints, 256-value stack, 64 return addresses,
+// 256 words of memory, ten traps each with its own exit code.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } {
-  const D = new Int32Array(256);
-  const C = new Int32Array(64);
-  const M = new Int32Array(256);
-  const o = new Uint8Array(65536);
-  const d = new Uint8Array(12);
+const PP = '000112230000000022222221222122202220000000000000011000000000000012000000000000001101';
+const PS = '011022330000000011111111111111101110000000000000000000000000000010000000000000000010';
+function run(p, inp) {
+  const D = new Int32Array(256), C = new Int32Array(64), M = new Int32Array(256);
+  const o = new Uint8Array(65536), d = new Uint8Array(12);
   let sp = 0, cp = 0, ol = 0, ip = 0, pc = 0, st = 0;
-  const end = (code: number): { out: Uint8Array; code: number } => ({ out: o.subarray(0, ol), code });
+  const end = (c) => ({ out: o.subarray(0, ol), code: c });
   for (;;) {
     if (st === 1000000) return end(10);
     if (pc < 0 || pc >= p.length) return end(9);
@@ -24,10 +21,7 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
     if (pc + imm >= p.length) return end(9);
     st++;
     const nx = pc + 1 + imm;
-    const pp = op === 7 ? 3 : op === 5 || op === 6 || (op >= 0x10 && op <= 0x22 && op !== 0x17 && op !== 0x1b) || op === 0x41 ? 2
-      : op === 3 || op === 4 || op === 0x17 || op === 0x1b || op === 0x31 || op === 0x32 || op === 0x40 || op === 0x50 || op === 0x51 || op === 0x53 ? 1 : 0;
-    const ps = op === 6 || op === 7 ? 3 : op === 4 || op === 5 ? 2
-      : op === 1 || op === 2 || (op >= 0x10 && op <= 0x22) || op === 0x40 || op === 0x52 ? 1 : 0;
+    const pp = PP.charCodeAt(op) - 48, ps = PS.charCodeAt(op) - 48;
     if (sp < pp) return end(2);
     if (sp - pp + ps > 256) return end(3);
     pc = nx;
@@ -45,7 +39,7 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
       case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16:
       case 0x18: case 0x19: case 0x1a: case 0x1c: case 0x1d: case 0x1e: case 0x20: case 0x21: case 0x22: {
         const b = D[sp - 1], a = D[sp - 2];
-        let r: number;
+        let r;
         if (op === 0x10) r = (a + b) | 0;
         else if (op === 0x11) r = (a - b) | 0;
         else if (op === 0x12) r = Math.imul(a, b);
@@ -103,11 +97,10 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
     }
   }
 }
-
 const I = process.env.MAKEFUN_INPUT_DIR ?? '/input';
 const O = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 for (const id of readdirSync(I).sort()) {
-  let r: { out: Uint8Array; code: number };
+  let r;
   try {
     r = run(readFileSync(join(I, id, 'program.bin')), readFileSync(join(I, id, 'input.bin')));
   } catch {
