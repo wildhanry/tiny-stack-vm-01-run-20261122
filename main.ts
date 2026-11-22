@@ -1,11 +1,9 @@
-// Tiny stack VM for make.fun tiny-stack-vm-01-run-20261122: an interpreter
-// of the tiny stack ISA (kit generator/subject/ISA.md), faithful to the
-// reference VM: 32-bit wrapping ints, 256-value stack, 64 return addresses,
-// 256 words of memory, ten traps each with its own exit code.
+// Tiny stack VM for make.fun tiny-stack-vm-01-run-20261122 (ISA in the kit).
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const PP = '000112230000000022222221222122202220000000000000011000000000000012000000000000001101';
 const PS = '011022330000000011111111111111101110000000000000000000000000000010000000000000000010';
+const VV = '111111110000000011111111111111101110000000000000111110000000000011000000000000001111';
 function run(p, inp) {
   const D = new Int32Array(256), C = new Int32Array(64), M = new Int32Array(256);
   const o = new Uint8Array(65536), d = new Uint8Array(12);
@@ -15,8 +13,7 @@ function run(p, inp) {
     if (st === 1000000) return end(10);
     if (pc < 0 || pc >= p.length) return end(9);
     const op = p[pc];
-    if (op > 7 && !(op >= 0x10 && op <= 0x22 && op !== 0x1f) && !(op >= 0x30 && op <= 0x34)
-      && op !== 0x40 && op !== 0x41 && !(op >= 0x50 && op <= 0x53)) return end(5);
+    if (op > 0x53 || VV[op] === '0') return end(5);
     const imm = op === 1 ? 1 : op === 2 ? 4 : op >= 0x30 && op <= 0x33 ? 2 : 0;
     if (pc + imm >= p.length) return end(9);
     st++;
